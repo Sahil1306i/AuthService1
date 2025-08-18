@@ -2,12 +2,14 @@ package org.example.service;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 import java.util.function.Function;
 
 @Service
@@ -22,16 +24,40 @@ public class JwtService {
          }
          //T here means that we can pass any data type here
 
-         public <T> T extractClaim(String token, Function<Claims , T> claimResolver){
+    public <T> T extractClaim(String token, Function<Claims , T> claimResolver){
         final Claims claims = extractAllClaims(token);
         return claimResolver.apply(claims);
          }
-         
-         public Date extractExpiration(String token){
+
+         //This method will call such a method which will retreive the claims
+    public Date extractExpiration(String token){
         return extractClaim(token, Claims::getExpiration);
          }
 
-         private Claims extractAllClaims(String token){
+    private Boolean isTokenExpired(String token){
+        return extractExpiration(token).before(new Date());
+        //.before will return false if the token is not expired bby reading the date
+    }
+
+    //userdetail is the class which comes from the springboot which conatins username and password and everything
+    public boolean validateToken(String token, UserDetails userDetails){
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername())&& !isTokenExpired(token))
+    }
+    // this will return true id the username is right and the token is not expired as well
+
+
+    private String createToken(Map<String, Object> claims, String username){
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(username)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis()+1000*60*1))
+                .signWith(getSignKey(), SignatureAlgorithm.ES256).compact();
+    }
+
+
+    private Claims extractAllClaims(String token){
         return Jwts
                 .parser()
                 .setSigningKey(getSignKey())
@@ -41,7 +67,7 @@ public class JwtService {
                 //chaining something i guess
          }
 
-         private Key getSignKey(){
+    private Key getSignKey(){
         byte[] keyBytes = Base64.Decoder.BASE64.decode(SECRET);
         //decoding the secret key then making a new key instance
         return Keys.hmacShaKeyFor(keyBytes);
