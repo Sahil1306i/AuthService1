@@ -39,14 +39,15 @@ public class UserDetailsServiceImpl implements UserDetailsService
     }
 
     public Boolean signupUser(UserInfoDto userInfoDto){
-        // Define a function to check if userEmail, password is correct
+        //TODO Define a function to check if userEmail and password is correct
         
         userInfoDto.setPassword(passwordEncoder.encode(userInfoDto.getPassword()));
         if(Objects.nonNull(checkIfUserAlreadyExists(userInfoDto))){
             return false;
         }
         String userId = UUID.randomUUID().toString();
-        userRepository.save(new UserInfo(userId, userInfoDto.getUsername(), userInfoDto.getPassword(), new HashSet<>()));
+        userRepository.save(new UserInfo(userId, userInfoDto.getUsername(),
+                userInfoDto.getPassword(), new HashSet<>()));
         return true;
     }
 }
